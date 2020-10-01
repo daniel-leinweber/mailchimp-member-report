@@ -36,8 +36,10 @@ namespace NewsletterMembersReport
         {
             while (stoppingToken.IsCancellationRequested == false)
             {
-                var csvFile = await CreateCsv();
-                SendMail(csvFile);
+                await CreateCsv().ContinueWith((csvFile) =>
+                {
+                    SendMail(csvFile.Result);
+                }, TaskContinuationOptions.OnlyOnRanToCompletion);
 
                 // Next execution after 30 days
                 await Task.Delay(TimeSpan.FromDays(_reportSettings.IntervalInDays), stoppingToken);
