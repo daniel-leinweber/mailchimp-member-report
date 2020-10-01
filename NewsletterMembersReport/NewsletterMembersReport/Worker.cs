@@ -41,8 +41,11 @@ namespace NewsletterMembersReport
                     SendMail(csvFile.Result);
                 }, TaskContinuationOptions.OnlyOnRanToCompletion);
 
-                // Next execution after 30 days
-                await Task.Delay(TimeSpan.FromDays(_reportSettings.IntervalInDays), stoppingToken);
+                // Next execution after x days
+                for (int i = 0; i < _reportSettings.IntervalInDays; i++)
+                {// Workaround for maximum int value
+                    await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
+                }
             }
         }
 
