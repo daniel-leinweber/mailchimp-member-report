@@ -103,8 +103,14 @@ namespace NewsletterMembersReport
 
             using (var message = new MailMessage(from, to, subject, body))
             {
-                message.CC.Add(cc);
-                message.Bcc.Add(bcc);
+                if (string.IsNullOrEmpty(cc) == false)
+                {
+                    message.CC.Add(cc);
+                }
+                if (string.IsNullOrEmpty(bcc) == false)
+                {
+                    message.Bcc.Add(bcc);
+                }
                 message.Attachments.Add(attachment);
                 message.IsBodyHtml = true;
                 smtp.Send(message);
