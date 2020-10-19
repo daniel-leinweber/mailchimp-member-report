@@ -36,17 +36,43 @@ namespace NewsletterMembersReport
         {
             while (stoppingToken.IsCancellationRequested == false)
             {
-                await CreateCsv().ContinueWith((csvFile) =>
-                {
-                    SendMail(csvFile.Result);
-                }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                // Calculate the next execution time
+                DateTime nextExecution = CalculateNextExecutionTime();
 
-                // Next execution after x days
-                for (int i = 0; i < _reportSettings.IntervalInDays; i++)
+                // Execute task if next execution time is already in the past
+                if (nextExecution <= DateTime.Now.Date)
+                {
+                    await CreateCsv().ContinueWith((csvFile) =>
+                    {
+                        SendMail(csvFile.Result);
+
+                        // Save the current date as the last execution time
+                        Properties.Settings.Default.LastExecutionTime = DateTime.Now.Date.ToString();
+                        Properties.Settings.Default.Save();
+
+                    }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                }
+
+                // Delay next execution for x days
+                int daysUntilNextExecution = (nextExecution - DateTime.Now.Date).Days;
+                for (int i = 0; i < daysUntilNextExecution; i++)
                 {// Workaround for maximum int value
                     await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
                 }
             }
+        }
+
+        private DateTime CalculateNextExecutionTime()
+        {
+            DateTime output = DateTime.Now;
+
+            if (string.IsNullOrEmpty(Properties.Settings.Default.LastExecutionTime) == false)
+            {
+                DateTime lastExecutionTime = DateTime.Parse(Properties.Settings.Default.LastExecutionTime);
+                output = lastExecutionTime.AddDays(_reportSettings.IntervalInDays);
+            }
+
+            return output.Date;
         }
 
         private async Task<string> CreateCsv()
@@ -58,7 +84,7 @@ namespace NewsletterMembersReport
             var members = await manager.Members.GetAllAsync(_mailChimpSettings.AudienceListId, new MailChimp.Net.Core.MemberRequest { Status = Status.Subscribed, Limit = 10000 });
 
             // Get csv file path
-            string localAppData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "newsletter_member_report");
+            string localAppData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NewsletterMembersReport");
             string csvFilePath = Path.Combine(localAppData, "newsletter_members.csv");
 
             // Create directory
@@ -119,7 +145,7 @@ namespace NewsletterMembersReport
                 message.Attachments.Add(attachment);
                 message.IsBodyHtml = true;
                 smtp.Send(message);
-            }
+            }            
 
             _logger.LogInformation($"Finished Mail Creation. Mail was sent - {DateTime.Now}");
         }
