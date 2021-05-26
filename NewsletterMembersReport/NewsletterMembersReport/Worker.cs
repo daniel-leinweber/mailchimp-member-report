@@ -100,7 +100,8 @@ namespace NewsletterMembersReport
             {
                 string firstname = member.MergeFields.First(x => x.Key == "FNAME").Value.ToString();
                 string lastname = member.MergeFields.First(x => x.Key == "LNAME").Value.ToString();
-                csvLines.Add($"{firstname} {lastname},{firstname},{lastname},Home,{member.EmailAddress},Status: {member.Status}");
+                string optIn = DateTime.Parse(member.TimestampOpt).ToString("G");
+                csvLines.Add($"{firstname} {lastname},{firstname},{lastname},Home,{member.EmailAddress},Status: {member.Status} - Opt-in: {optIn}");
             }
             File.WriteAllLines(csvFilePath, csvLines, Encoding.UTF8);
 
